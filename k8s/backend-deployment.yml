@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-blue
+  namespace: kgj
+spec:
+  selector:
+    matchLabels:
+      type: backend
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        type: backend
+    spec:
+      containers:
+        - name: backend
+          image: k6kjun/backend2:latest
