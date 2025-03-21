@@ -41,6 +41,7 @@ jobs:
           name: Push Docker iamge
           command: |
             TAG=0.1.$CIRCLE_BUILD_NUM
+            docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
             docker push $DOCKERHUB_USERNAME/backend:$TAG
 workflows:
   version: 2
