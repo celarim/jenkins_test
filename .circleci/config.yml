@@ -1,6 +1,9 @@
-# This config was automatically generated from your source code
-# Stacks detected: cicd:jenkins:.,deps:java:.,tool:gradle:
 version: 2.1
+
+parameters:
+  tag:
+    type: string
+    default: v1
 
 jobs:
   gradle-build:
@@ -36,21 +39,26 @@ jobs:
       - run:
           name: Build Docker image
           command: |
-            TAG=0.1.$CIRCLE_BUILD_NUM
-            docker build -t $DOCKERHUB_USERNAME/backend:$TAG .
+            echo "Using TAG << pipeline.parameters.tag >>"
+            docker build -t $DOCKERHUB_USERNAME/atpback:<< pipeline.parameters.tag >> .
       - run:
           name: Push application Docker image
           command: |
-            TAG=0.1.$CIRCLE_BUILD_NUM
             docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD
-            docker push $DOCKERHUB_USERNAME/backend:$TAG
-
-
+            docker push $DOCKERHUB_USERNAME/atpback:<< pipeline.parameters.tag >>
 workflows:
   version: 2
   build-and-deploy:
     jobs:
-      - gradle-build
+      - gradle-build:
+          filters:
+            branches:
+              only:
+                - circleci-project-setup
       - docker-build-and-push:
           requires:
             - gradle-build
+          filters:
+            branches:
+              only:
+                - circleci-project-setup

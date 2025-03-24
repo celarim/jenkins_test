@@ -4,6 +4,7 @@ pipeline {
     environment {
 		IMAGE_NAME = 'celairm/backend2'
         IMAGE_TAG = "0.${BUILD_NUMBER}"
+        GITHUB_REPO = 'https://github.com/celarim/jenkins_test'
     }
 
     stages {
@@ -38,6 +39,22 @@ pipeline {
                 }
             }
         }
+        stage('Get Blue or Green') {
+			steps {
+				script {
+					if (BUILD_ID.toInteger() % 2 == 0) {
+						env.BORG = "blue"
+						env.NOTBORG = "green"
+					} else {
+						env.BORG = "green"
+						env.NOTBORG = "blue"
+					}
+                }
+            }
+        }
+
+
+
         stage('SSH') {
 			steps{
 				script{
@@ -55,10 +72,39 @@ pipeline {
                                         '''
                                     ),
                                     sshTransfer(
+                                        sourceFiles: 'k8s/backend-deployment.yml',
+                                        remoteDirectory: '/',
                                         execCommand: '''
-                                            kubectl apply -f /home/test/k8s/backend-deployment.yml
+                                            sed -i "s/borg/$BORG/g" k8s/backend-deployment.yml
                                         '''
-                                    )
+                                    ),
+                                    sshTransfer(
+                                        execCommand: '''
+                                            kubectl apply -f /home/test/k8s/backend-deployment.yml -n kgj
+                                        '''
+                                    ),
+                                    sshTransfer(
+                                        execCommand: '''
+                                            kubectl wait --for=condition=available deployment/backend-$BORG --timeout=120s
+                                        '''
+                                    ),
+                                    sshTransfer(
+                                        sourceFiles: 'k8s/backend-service.yml',
+                                        remoteDirectory: '/',
+                                        execCommand: '''
+                                            sed -i "s/borg/$BORG/g" k8s/backend-service.yml
+                                        '''
+                                    ),
+                                    sshTransfer(
+                                        execCommand: '''
+                                            kubectl apply -f k8s/backend-service.yml'
+                                        '''
+                                    ),
+									sshTransfer(
+                                        execCommand: '''
+                                            kubectl scale deployment backend-$NOTBORG --replicas=0 -n kgj
+                                        '''
+                                    ),
                                 ]
                             )
                         ]
